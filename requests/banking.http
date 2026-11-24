@@ -1,0 +1,91 @@
+@baseUrl = http://localhost:8080
+@customerToken = {{$processEnv FINBRIDGE_CUSTOMER_TOKEN}}
+@operatorToken = {{$processEnv FINBRIDGE_OPERATOR_TOKEN}}
+@adminToken = {{$processEnv FINBRIDGE_ADMIN_TOKEN}}
+@auditorToken = {{$processEnv FINBRIDGE_AUDITOR_TOKEN}}
+@accountA = REEMPLAZA_CON_UUID_CREADO
+@accountB = REEMPLAZA_CON_OTRO_UUID
+
+### Infraestructura: disponible desde el inicio
+GET {{baseUrl}}/actuator/health
+
+### FB-002: crear cuenta con cliente ficticio V3
+POST {{baseUrl}}/api/v1/accounts
+Authorization: Bearer {{operatorToken}}
+Content-Type: application/json
+
+{
+  "customerId": "00000000-0000-4000-8000-000000000011",
+  "currency": "COP"
+}
+
+### FB-004 a FB-006: transferencia interna ACID (ambas cuentas mismo customerId)
+POST {{baseUrl}}/api/v1/transfers
+Authorization: Bearer {{customerToken}}
+Content-Type: application/json
+Idempotency-Key: demo-transfer-000001
+X-Correlation-ID: demo-trace-01
+
+{
+  "sourceAccountId": "{{accountA}}",
+  "destinationAccountId": "{{accountB}}",
+  "amount": 25000.00,
+  "currency": "COP",
+  "reference": "Pago de prueba"
+}
+
+### FB-004: consultar transferencia
+GET {{baseUrl}}/api/v1/transfers/44444444-4444-4444-8444-444444444444
+Authorization: Bearer {{customerToken}}
+
+### FB-002: consultar saldo
+GET {{baseUrl}}/api/v1/accounts/{{accountA}}/balance
+Authorization: Bearer {{customerToken}}
+
+
+### FB-003: fondeo de apertura (solo sandbox explícitamente habilitado)
+# Exportar SANDBOX_FUNDING_ENABLED=true antes de arrancar.
+POST {{baseUrl}}/api/v1/admin/accounts/{{accountA}}/opening-balance
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+Idempotency-Key: opening-test-key-00000001
+X-Correlation-ID: sprint1-demo-001
+
+{
+  "amount": 100000.00,
+  "reason": "Fondeo ficticio de entrenamiento"
+}
+
+
+### FB-005: repetir EXACTAMENTE la misma clave y cuerpo para comprobar replay 201
+POST {{baseUrl}}/api/v1/transfers
+Authorization: Bearer {{customerToken}}
+Content-Type: application/json
+Idempotency-Key: demo-transfer-000001
+X-Correlation-ID: demo-trace-01
+
+{
+  "sourceAccountId": "{{accountA}}",
+  "destinationAccountId": "{{accountB}}",
+  "amount": 25000.00,
+  "currency": "COP",
+  "reference": "Pago de prueba"
+}
+
+### FB-005: misma clave pero importe distinto -> 409
+POST {{baseUrl}}/api/v1/transfers
+Authorization: Bearer {{customerToken}}
+Content-Type: application/json
+Idempotency-Key: demo-transfer-000001
+
+{
+  "sourceAccountId": "{{accountA}}",
+  "destinationAccountId": "{{accountB}}",
+  "amount": 26000.00,
+  "currency": "COP",
+  "reference": "Pago de prueba"
+}
+
+### FB-008: evidencia de auditoría (reemplazar ID)
+GET {{baseUrl}}/api/v1/audit/transfers/44444444-4444-4444-8444-444444444444
+Authorization: Bearer {{auditorToken}}

@@ -1,0 +1,3 @@
+-- V1: baseline sin modelo de dominio.
+-- Historia FB-001: añade V2__banking_schema.sql con tablas, claves, indices y constraints.
+-- No modifiques una migración aplicada en un entorno compartido.

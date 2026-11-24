@@ -1,0 +1,156 @@
+{
+  "realm": "finbridge",
+  "enabled": true,
+  "sslRequired": "none",
+  "registrationAllowed": false,
+  "accessTokenLifespan": 300,
+  "roles": {
+    "realm": [
+      {
+        "name": "CUSTOMER"
+      },
+      {
+        "name": "OPERATIONS"
+      },
+      {
+        "name": "AUDITOR"
+      },
+      {
+        "name": "ADMIN"
+      }
+    ]
+  },
+  "users": [
+    {
+      "id": "00000000-0000-4000-8000-000000000011",
+      "username": "customer-a",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Synthetic",
+      "lastName": "CUSTOMER",
+      "email": "customer-a@example.invalid",
+      "realmRoles": [
+        "CUSTOMER"
+      ],
+      "credentials": [
+        {
+          "type": "password",
+          "value": "I3eQv-ifKQI_kZS2GXyW0y2zGSDYVN3c",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000012",
+      "username": "customer-b",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Synthetic",
+      "lastName": "CUSTOMER",
+      "email": "customer-b@example.invalid",
+      "realmRoles": [
+        "CUSTOMER"
+      ],
+      "credentials": [
+        {
+          "type": "password",
+          "value": "UdteOEBxNZWv1u0CfRm9dKpAcFdfKjJN",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000091",
+      "username": "operations",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Synthetic",
+      "lastName": "OPERATIONS",
+      "email": "operations@example.invalid",
+      "realmRoles": [
+        "OPERATIONS"
+      ],
+      "credentials": [
+        {
+          "type": "password",
+          "value": "OnKug5J7ch_YBvzX_lkVwEL9Br_pbFRr",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000092",
+      "username": "admin",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Synthetic",
+      "lastName": "ADMIN",
+      "email": "admin@example.invalid",
+      "realmRoles": [
+        "ADMIN"
+      ],
+      "credentials": [
+        {
+          "type": "password",
+          "value": "JskRiSA05MxbYDR8XZEscW0yp7BccQLO",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000093",
+      "username": "auditor",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Synthetic",
+      "lastName": "AUDITOR",
+      "email": "auditor@example.invalid",
+      "realmRoles": [
+        "AUDITOR"
+      ],
+      "credentials": [
+        {
+          "type": "password",
+          "value": "JWe84bbKPEeSQTfHGo8KPBAkCGlHbnVn",
+          "temporary": false
+        }
+      ]
+    }
+  ],
+  "clients": [
+    {
+      "clientId": "finbridge-cli",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": true,
+      "standardFlowEnabled": false,
+      "directAccessGrantsEnabled": true,
+      "fullScopeAllowed": true,
+      "protocolMappers": [
+        {
+          "name": "finbridge-roles",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-realm-role-mapper",
+          "config": {
+            "claim.name": "roles",
+            "jsonType.label": "String",
+            "multivalued": "true",
+            "access.token.claim": "true",
+            "id.token.claim": "false",
+            "userinfo.token.claim": "false"
+          }
+        },
+        {
+          "name": "finbridge-audience",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "config": {
+            "included.custom.audience": "finbridge-api",
+            "access.token.claim": "true",
+            "id.token.claim": "false"
+          }
+        }
+      ]
+    }
+  ]
+}

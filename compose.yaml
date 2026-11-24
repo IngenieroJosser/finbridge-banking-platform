@@ -1,0 +1,47 @@
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_NAME:-finbridge}
+      POSTGRES_USER: ${DB_USER:-finbridge}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?Copia .env.example a .env}
+    ports:
+      - "127.0.0.1:${DB_PORT:-5433}:5432"
+    volumes:
+      - finbridge_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+  api:
+    profiles: ["full"]
+    build: .
+    environment:
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_NAME: ${DB_NAME:-finbridge}
+      DB_USER: ${DB_USER:-finbridge}
+      DB_PASSWORD: ${DB_PASSWORD:?Copia .env.example a .env}
+      SERVER_PORT: 8080
+      SERVER_ADDRESS: 0.0.0.0
+      JWT_ISSUER: ${JWT_ISSUER:-http://localhost:8180/realms/finbridge}
+      JWT_JWK_SET_URI: ${JWT_JWK_SET_URI_DOCKER:-http://idp:8080/realms/finbridge/protocol/openid-connect/certs}
+      JWT_AUDIENCE: ${JWT_AUDIENCE:-finbridge-api}
+      SANDBOX_FUNDING_ENABLED: ${SANDBOX_FUNDING_ENABLED:-false}
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:8080:8080"
+  idp:
+    profiles: ["idp"]
+    image: ${KEYCLOAK_IMAGE:-quay.io/keycloak/keycloak:26.4.7}
+    command: ["start-dev", "--import-realm", "--hostname=http://localhost:8180"]
+    ports:
+      - "127.0.0.1:8180:8080"
+    volumes:
+      - ./.local-idp/realm.json:/opt/keycloak/data/import/realm.json:ro
+volumes:
+  finbridge_pgdata:

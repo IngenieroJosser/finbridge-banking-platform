@@ -1,0 +1,477 @@
+openapi: 3.0.3
+info:
+  title: FinBridge Banking API (Sprints 1–3 + contrato objetivo)
+  version: 0.2.0
+  description: >
+    API simulada sin dinero real. Cuentas, fondeo local ADMIN, transferencias internas ACID,
+    JWT RS256, RBAC, ownership y evidencia de auditoría implementados. Las rutas de
+    integración externa, movimientos paginados y conciliación corresponden al contrato futuro
+    y se deniegan hasta su implementación. Los reintentos retornan 201 y el mismo ID.
+servers:
+  - url: http://localhost:8080
+security:
+  - bearerAuth: []
+paths:
+  /api/v1/accounts:
+    post:
+      operationId: createAccount
+      tags: [Accounts]
+      summary: Crear cuenta COP vacía (OPERATIONS o ADMIN)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateAccountRequest' }
+      responses:
+        '201':
+          description: Cuenta creada
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AccountResponse' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /api/v1/accounts/{accountId}:
+    get:
+      operationId: getAccount
+      tags: [Accounts]
+      summary: Consultar cuenta propia o mediante rol de consulta autorizado
+      parameters:
+        - $ref: '#/components/parameters/AccountId'
+      responses:
+        '200':
+          description: Cuenta encontrada
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AccountResponse' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /api/v1/accounts/{accountId}/balance:
+    get:
+      operationId: getBalance
+      tags: [Accounts]
+      summary: Consultar saldo disponible de cuenta
+      parameters:
+        - $ref: '#/components/parameters/AccountId'
+      responses:
+        '200':
+          description: Saldo disponible
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/BalanceResponse' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /api/v1/transfers:
+    post:
+      operationId: createInternalTransfer
+      tags: [Transfers]
+      summary: Procesar transferencia interna idempotente (FB-004 a FB-007)
+      description: >
+        Endpoint funcional en laboratorio. Reintentos con idéntica clave y cuerpo canónico
+        devuelven HTTP 201 y el mismo transferId; cuerpos diferentes con igual clave, 409.
+        Monto cero/negativo y precisión incorrecta, 400; reglas financieras, 422.
+        Solo CUSTOMER y ambas cuentas deben pertenecer al subject validado del JWT.
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/CorrelationId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/InternalTransferRequest' }
+            example:
+              sourceAccountId: '11111111-1111-4111-8111-111111111111'
+              destinationAccountId: '22222222-2222-4222-8222-222222222222'
+              amount: 25000.00
+              currency: COP
+              reference: Pago de prueba
+      responses:
+        '201':
+          description: Transferencia interna completada; incluye Location
+          headers:
+            Location:
+              schema: { type: string, format: uri-reference }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TransferResponse' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/Unprocessable' }
+  /api/v1/transfers/{transferId}:
+    get:
+      operationId: getTransfer
+      tags: [Transfers]
+      parameters:
+        - $ref: '#/components/parameters/TransferId'
+      responses:
+        '200':
+          description: Transferencia encontrada
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TransferResponse' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /api/v1/audit/transfers/{transferId}:
+    get:
+      operationId: getTransferAuditEvidence
+      tags: [Audit]
+      summary: Reconstruir transferencia con actor, correlación, journal y postings (AUDITOR u OPERATIONS)
+      parameters:
+        - $ref: '#/components/parameters/TransferId'
+      responses:
+        '200':
+          description: Evidencia contable de solo lectura
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TransferAuditEvidence' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /api/v1/external-transfers:
+    post:
+      operationId: submitExternalTransfer
+      tags: [Transfers]
+      summary: Transferencia a proveedor simulado; implementación en Sprint 4
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/CorrelationId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ExternalTransferRequest' }
+      responses:
+        '202':
+          description: Solicitud recibida; no implica liquidación
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TransferResponse' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/Unprocessable' }
+
+  /api/v1/admin/accounts/{accountId}/opening-balance:
+    post:
+      operationId: fundOpeningBalance
+      tags: [Ledger]
+      summary: Fondeo de apertura en sandbox (ADMIN, opt-in local)
+      parameters:
+        - $ref: '#/components/parameters/AccountId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/OpeningBalanceRequest' }
+      responses:
+        '201':
+          description: Fondeo aplicado con asiento balanceado
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/FundingResponse' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /api/v1/accounts/{accountId}/movements:
+    get:
+      operationId: getAccountMovements
+      tags: [Ledger]
+      summary: Consultar movimientos contables paginados de una cuenta
+      parameters:
+        - $ref: '#/components/parameters/AccountId'
+        - name: page
+          in: query
+          schema: { type: integer, minimum: 0, default: 0 }
+        - name: size
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+      responses:
+        '200':
+          description: Movimientos del ledger
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MovementsPage' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /api/v1/provider/events:
+    post:
+      operationId: receiveProviderEvent
+      tags: [Integration]
+      summary: Recepción de callback firmado y deduplicado (FB-011)
+      security: []
+      parameters:
+        - name: X-Provider-Signature
+          in: header
+          required: true
+          description: HMAC de payload original firmado con secret del proveedor simulado
+          schema: { type: string }
+        - name: X-Provider-Timestamp
+          in: header
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ProviderEvent' }
+      responses:
+        '200': { description: Evento aceptado o duplicado deduplicado }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /api/v1/reconciliations/import:
+    post:
+      operationId: importReconciliationReport
+      tags: [Reconciliation]
+      summary: Importar CSV de proveedor simulado (FB-012)
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file: { type: string, format: binary }
+      responses:
+        '202':
+          description: Lote recibido para procesamiento
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/BatchResponse' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /api/v1/reconciliations/{batchId}:
+    get:
+      operationId: getReconciliationReport
+      tags: [Reconciliation]
+      summary: Consultar estado e incidencias de un lote de conciliación
+      parameters:
+        - name: batchId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Resumen del lote
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/BatchResponse' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  parameters:
+    AccountId:
+      name: accountId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    TransferId:
+      name: transferId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      schema: { type: string, minLength: 16, maxLength: 128 }
+      description: Token opaco ASCII imprimible sin espacios; unicidad por actor y operación (subject autenticado desde Sprint 3).
+    CorrelationId:
+      name: X-Correlation-ID
+      in: header
+      required: false
+      schema: { type: string, minLength: 1, maxLength: 128, pattern: "^[A-Za-z0-9._-]+$" }
+  schemas:
+    CreateAccountRequest:
+      type: object
+      required: [customerId, currency]
+      additionalProperties: false
+      properties:
+        customerId: { type: string, format: uuid }
+        currency: { type: string, enum: [COP] }
+    AccountResponse:
+      type: object
+      required: [id, customerId, currency, status]
+      properties:
+        id: { type: string, format: uuid }
+        customerId: { type: string, format: uuid }
+        currency: { type: string, enum: [COP] }
+        status: { type: string, enum: [ACTIVE, BLOCKED, CLOSED] }
+    BalanceResponse:
+      type: object
+      required: [accountId, currency, availableBalance]
+      properties:
+        accountId: { type: string, format: uuid }
+        currency: { type: string, enum: [COP] }
+        availableBalance: { type: number, format: decimal, multipleOf: 0.01, minimum: 0 }
+    InternalTransferRequest:
+      type: object
+      required: [sourceAccountId, destinationAccountId, amount, currency]
+      additionalProperties: false
+      properties:
+        sourceAccountId: { type: string, format: uuid }
+        destinationAccountId: { type: string, format: uuid }
+        amount: { type: number, format: decimal, exclusiveMinimum: 0, maximum: 50000000, multipleOf: 0.01 }
+        currency: { type: string, enum: [COP] }
+        reference: { type: string, maxLength: 140 }
+    ExternalTransferRequest:
+      type: object
+      required: [sourceAccountId, providerBankCode, destinationAccountReference, amount, currency]
+      additionalProperties: false
+      properties:
+        sourceAccountId: { type: string, format: uuid }
+        providerBankCode: { type: string, minLength: 2, maxLength: 20 }
+        destinationAccountReference: { type: string, minLength: 4, maxLength: 64 }
+        amount: { type: number, format: decimal, exclusiveMinimum: 0, maximum: 50000000, multipleOf: 0.01 }
+        currency: { type: string, enum: [COP] }
+        reference: { type: string, maxLength: 140 }
+    TransferResponse:
+      type: object
+      required: [id, type, status, amount, currency, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        type: { type: string, enum: [INTERNAL, EXTERNAL] }
+        status: { type: string, enum: [RECEIVED, RESERVED, SUBMITTED, COMPLETED, SETTLED, REJECTED, IN_REVIEW] }
+        amount: { type: number, format: decimal, multipleOf: 0.01 }
+        currency: { type: string, enum: [COP] }
+        createdAt: { type: string, format: date-time }
+        correlationId: { type: string, nullable: true }
+
+    OpeningBalanceRequest:
+      type: object
+      required: [amount, reason]
+      additionalProperties: false
+      properties:
+        amount: { type: number, format: decimal, exclusiveMinimum: 0, multipleOf: 0.01 }
+        reason: { type: string, minLength: 5, maxLength: 140 }
+    FundingResponse:
+      type: object
+      required: [journalId, accountId, amount, currency]
+      properties:
+        journalId: { type: string, format: uuid }
+        accountId: { type: string, format: uuid }
+        amount: { type: number, format: decimal }
+        currency: { type: string, enum: [COP] }
+    Movement:
+      type: object
+      required: [id, journalId, side, amount, occurredAt]
+      properties:
+        id: { type: string, format: uuid }
+        journalId: { type: string, format: uuid }
+        side: { type: string, enum: [DEBIT, CREDIT] }
+        amount: { type: number, format: decimal }
+        occurredAt: { type: string, format: date-time }
+    MovementsPage:
+      type: object
+      required: [content, page, size, totalElements]
+      properties:
+        content:
+          type: array
+          items: { $ref: '#/components/schemas/Movement' }
+        page: { type: integer }
+        size: { type: integer }
+        totalElements: { type: integer, format: int64 }
+    ProviderEvent:
+      type: object
+      required: [eventId, providerTransferId, transferId, status, occurredAt]
+      properties:
+        eventId: { type: string }
+        providerTransferId: { type: string }
+        transferId: { type: string, format: uuid }
+        status: { type: string, enum: [ACCEPTED, SETTLED, REJECTED] }
+        occurredAt: { type: string, format: date-time }
+    BatchResponse:
+      type: object
+      required: [batchId, status]
+      properties:
+        batchId: { type: string, format: uuid }
+        status: { type: string, enum: [RECEIVED, PROCESSING, COMPLETED, FAILED] }
+        matched: { type: integer, minimum: 0 }
+        mismatched: { type: integer, minimum: 0 }
+    TransferAuditEvidence:
+      type: object
+      required: [transferId, status, events, postings]
+      properties:
+        transferId: { type: string, format: uuid }
+        correlationId: { type: string, nullable: true }
+        status: { type: string }
+        journalId: { type: string, format: uuid, nullable: true }
+        events:
+          type: array
+          items:
+            type: object
+            properties:
+              id: { type: string, format: uuid }
+              actorId: { type: string, format: uuid }
+              eventType: { type: string }
+              correlationId: { type: string }
+              occurredAt: { type: string, format: date-time }
+        postings:
+          type: array
+          items:
+            type: object
+            properties:
+              id: { type: string, format: uuid }
+              accountId: { type: string, format: uuid }
+              side: { type: string, enum: [DEBIT, CREDIT] }
+              amount: { type: number, format: decimal }
+              currency: { type: string, enum: [COP] }
+    Problem:
+      type: object
+      description: application/problem+json (RFC 9457)
+      properties:
+        type: { type: string, format: uri }
+        title: { type: string }
+        status: { type: integer }
+        detail: { type: string }
+        instance: { type: string }
+        correlationId: { type: string }
+  responses:
+    BadRequest:
+      description: Entrada inválida
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+    Unauthorized:
+      description: Token ausente o no válido
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+    Forbidden:
+      description: Acceso no autorizado
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+    NotFound:
+      description: Recurso inexistente
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+    Conflict:
+      description: Idempotency-Key reutilizada con contenido distinto u otro conflicto
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+    Unprocessable:
+      description: Regla financiera no satisfecha
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
