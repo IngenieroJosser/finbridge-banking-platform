@@ -5,3 +5,6 @@
 .DS_Store
 target/
 *.log
+
+# Generated local Keycloak realm and credentials
+.local-idp/
