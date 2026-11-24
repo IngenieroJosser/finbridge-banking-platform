@@ -19,7 +19,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @Testcontainers
-@SpringBootTest(properties="finbridge.sandbox.funding-enabled=true")
+@SpringBootTest(properties={"finbridge.sandbox.funding-enabled=true","finbridge.provider.worker-enabled=false"})
 @AutoConfigureMockMvc(print=MockMvcPrint.NONE)
 class FinBridgeSprint3IntegrationTest {
     @Container static final PostgreSQLContainer<?> DB = new PostgreSQLContainer<>("postgres:16-alpine");
