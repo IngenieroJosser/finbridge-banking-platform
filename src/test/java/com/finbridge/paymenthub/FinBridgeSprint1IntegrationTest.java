@@ -29,6 +29,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @Testcontainers
 @AutoConfigureMockMvc(print = org.springframework.boot.test.autoconfigure.web.servlet.MockMvcPrint.NONE)
 @SpringBootTest(properties = {
+        "finbridge.provider.worker-enabled=false",
         "finbridge.sandbox.funding-enabled=true"
 })
 class FinBridgeSprint1IntegrationTest {
