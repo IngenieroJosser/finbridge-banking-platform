@@ -17,9 +17,11 @@ NovaBank es una entidad ficticia. FinBridge es un proyecto independiente de inge
 | 1 — Fundamentos y persistencia | FB-001–003 | 13 | Validado |
 | 2 — Motor de transferencias | FB-004–006 | 21 | Validado |
 | 3 — Acceso y calidad de servicio | FB-007–009 | 13 | Validado |
-| 4 — Integraciones y resiliencia | FB-010–013 | 21 | Implementación V7; aceptación pendiente de ejecución |
+| 4 — Integraciones y resiliencia | FB-010–013 | 21 | Integración automatizada aprobada; aceptación operativa final pendiente |
 
-Baseline validada el 24/11/2026: 24 pruebas automatizadas sin fallos, errores ni omisiones; cinco identidades reales de Keycloak en E2E; cinco ejecuciones CI exitosas; reglas de protección de main activas. Las evidencias corresponden a los Sprints 1–3, no a la aceptación de V7. El badge de CI refleja el estado de main.
+Evidencia al 24/11/2026: 34 pruebas automatizadas (24 de regresión y 10 del Sprint 4) aprobadas con PostgreSQL 16 y Flyway V1–V7; ejecución diagnóstica local de 19,497 s con worker deshabilitado. Regresión E2E interna con cinco identidades reales de Keycloak aprobada. Liquidación externa de 10.000 COP verificada mediante API, con saldo de 75.000 a 65.000 COP, dos journals, cuatro postings balanceados y tres eventos correlacionados. Snapshot operativo: una transferencia externa liquidada, cero eventos DLQ y cero asientos desbalanceados.
+
+El PR #4 de aislamiento de pruebas y actualización de acciones CI fue integrado en main (`1b35737`), con `verify` remoto exitoso. La validación local del hotfix con worker habilitado y la aceptación E2E de rechazo, timeout, conciliación y métricas adversas deben quedar registradas antes de publicar v1.0.0. El badge de CI refleja el estado vigente de main.
 
 ## Arquitectura
 
@@ -173,12 +175,13 @@ Los escenarios sintéticos SANDBOX_BANK, SANDBOX_REJECT y SANDBOX_TIMEOUT permit
 mvn clean verify
 # Con API y Keycloak activos; solo datos sintéticos:
 python3 scripts/verify-keycloak-e2e.py --confirm-sandbox
+python3 scripts/verify-sprint4-e2e.py --confirm-sandbox
 python3 scripts/metrics-snapshot.py
 ```
 
 Las pruebas de regresión anteriores cubren 20 reintentos concurrentes, sobregiro, transferencias bidireccionales, rollback, JWT y ownership. La suite Sprint 4 incorpora AT-13 a AT-18, crash-after-publish, callbacks duplicados y tardíos, compensación, DLQ, fixture de conciliación y métricas. El dashboard de snapshot se genera con valores observados en `target/metrics-snapshot.html`; no inventa benchmarks.
 
-El workflow [FinBridge - Maven CI](https://github.com/IngenieroJosser/finbridge-banking-platform/actions/workflows/ci.yml) comprueba Docker, ejecuta Maven verify y publica reportes JUnit. La integración se realiza por PR. Las pruebas JWT usan un fixture JWKS real efímero; el E2E Keycloak es un gate local complementario. La ejecución V7 debe confirmarse antes de declarar las nuevas historias aprobadas.
+El workflow [FinBridge - Maven CI](https://github.com/IngenieroJosser/finbridge-banking-platform/actions/workflows/ci.yml) comprueba Docker, ejecuta Maven verify y publica reportes JUnit. La integración se realiza por PR. Las pruebas JWT usan un fixture JWKS real efímero; el E2E Keycloak es un gate local complementario. Las pruebas V7 están aprobadas; el script de aceptación externa verifica la ejecución del worker real del sandbox y conserva la evidencia local por ejecución. Consultar [cierre y release](docs/16-aceptacion-release.md).
 
 ## Documentación técnica
 
@@ -198,6 +201,7 @@ El workflow [FinBridge - Maven CI](https://github.com/IngenieroJosser/finbridge-
 | [13 — Sprint 3](docs/13-sprint3-acceso-calidad.md) | JWT y auditoría |
 | [14 — E2E y CI](docs/14-validacion-end-to-end-ci.md) | Evidencias y procedimientos |
 | [15 — Sprint 4](docs/15-sprint4-integraciones-resiliencia.md) | Contabilidad externa, resiliencia y conciliación |
+| [16 — Aceptación y release](docs/16-aceptacion-release.md) | Validación reproducible y criterios de publicación |
 
 ## Límites
 
