@@ -4,6 +4,10 @@ spring:
   jackson:
     deserialization:
       fail-on-unknown-properties: true
+  servlet:
+    multipart:
+      max-file-size: 1MB
+      max-request-size: 2MB
   datasource:
     url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5433}/${DB_NAME:finbridge}
     username: ${DB_USER:finbridge}
@@ -23,7 +27,7 @@ management:
   endpoints:
     web:
       exposure:
-        include: health
+        include: health,metrics
   endpoint:
     health:
       show-details: never
@@ -38,6 +42,9 @@ management:
 finbridge:
   sandbox:
     funding-enabled: ${SANDBOX_FUNDING_ENABLED:false}
+  provider:
+    hmac-secret: ${PROVIDER_HMAC_SECRET:}
+    worker-enabled: ${PROVIDER_WORKER_ENABLED:false}
   security:
     issuer: ${JWT_ISSUER}
     jwk-set-uri: ${JWT_JWK_SET_URI}

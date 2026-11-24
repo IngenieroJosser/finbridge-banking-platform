@@ -33,5 +33,5 @@ Antes de publicar, comprobar que `.env`, `.local-idp/`, `target/`, credenciales,
 ## Evidencia de aceptación
 
 - Maven local: 24 pruebas, 0 fallos, 0 errores, 0 omitidas (24/11/2026).
-- E2E con Keycloak: requiere ejecución real y marcador `E2E SUCCESS`.
-- CI remoto: requiere ejecución satisfactoria en GitHub Actions y reporte XML asociado al commit evaluado.
+- E2E con Keycloak: ejecución satisfactoria del 24/11/2026; cinco JWT reales, saldos A=75000, B=25000, C=0 COP; dos postings de 25000 COP y un único evento de confirmación.
+- CI remoto: cinco ejecuciones satisfactorias observadas el 24/11/2026; integración PR #1 en main, commit `49b84d1`.
